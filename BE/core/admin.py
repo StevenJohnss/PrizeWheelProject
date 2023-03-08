@@ -48,4 +48,5 @@ class UserAdmin(BaseUserAdmin):
 admin.site.register(models.User, UserAdmin)
 admin.site.register(models.Spin)
 admin.site.register(models.Prize)
+admin.site.register(models.ResetUserPassword)
 # admin.site.register(models.Ingredient)

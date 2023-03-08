@@ -1,6 +1,7 @@
 """
 Database models.
 """
+from datetime import datetime
 import uuid
 import os
 
@@ -80,13 +81,13 @@ class User(AbstractBaseUser, PermissionsMixin):
 class Spin(models.Model):
     """Tag for filtering recipes."""
     remaining_spins = models.IntegerField(default=3)
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-    )
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, 
+                                       verbose_name=("user_spins"),
+                                       on_delete=models.CASCADE,
+                                       primary_key=True)
 
     def __str__(self):
-        return self.remaining_spins
+        return f"{self.remaining_spins}"
 
 
 class Prize(models.Model):
@@ -108,5 +109,20 @@ class UserPrize(models.Model):
     )
     
     def __str__(self):
-        return "test"
+        return f"{self.user.name} has won {self.prize.prize}"
+
+class ResetUserPassword(models.Model):
+    """Ingredient for recipes."""
+    temp_pass = models.UUIDField(default=uuid.uuid4, unique=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+    )
+    expiers_at= models.DateTimeField()
+    is_active= models.BooleanField(default=True)
+    create_date = models.DateTimeField(auto_now_add=True)
+    update_date = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.user.name} has an {'Active' if self.is_active else 'Inactive'} temp password of {self.temp_pass}"
       

@@ -6,12 +6,13 @@ from django.contrib.auth import (
     authenticate,
 )
 
-from core.models import Spin, UserPrize, Prize
+from core.models import Spin, UserPrize, Prize, ResetUserPassword
 from django.utils.translation import gettext as _
 from django.db import transaction
+from datetime import datetime, timedelta
 
 from rest_framework import serializers
-
+from rest_framework.exceptions import APIException
 
 class UserSerializer(serializers.ModelSerializer):
     """Serializer for the user object."""
@@ -67,10 +68,26 @@ class AuthTokenSerializer(serializers.Serializer):
 
 class SpinSerializer(serializers.ModelSerializer):
     """Serializer for the user object."""
-
+    user=UserSerializer()
+    #james token 25b2a49f9bb20071824c01b5219763740fbe32f5
     class Meta:
         model = Spin
         fields = ['user', 'remaining_spins']
+        extra_kwargs = {'user': {'read_only': True},
+                        'remaining_spins': {'read_only': True}
+                        }
+    
+    def update(self, instance, validated_data):
+        """Update and return user."""
+        validated_data.pop('remaining_spins', None)
+        if(instance.remaining_spins==0):
+            raise APIException(f"No remaining spins for user: {instance.user.name}")
+        
+        validated_data['remaining_spins'] = instance.remaining_spins - 1
+        spin = super().update(instance, validated_data)
+        spin.save()
+        
+        return spin
 
 
 class UserPrizeSerializer(serializers.ModelSerializer):
@@ -86,15 +103,57 @@ class UserPrizeSerializer(serializers.ModelSerializer):
         """Create and return a user with encrypted password."""
         prize_to_deacrese = Prize.objects.filter(pk=validated_data.get('prize').id).first()
         user_spins = Spin.objects.filter(user=validated_data.get('user').id).first()
+        old_user_prizez =  UserPrize.objects.filter(user=validated_data.get('user').id)
+        
+        if old_user_prizez.length <= 3:
+            raise APIException( f"Alredy has {old_user_prizez.length} prizes, thus we cannot add any more prizes for user: {user_spins.user.name}")
         
         if prize_to_deacrese.remaining_quantity <= 0:
-            raise Exception("No remaining prizez for prize: ",prize_to_deacrese.name)
+            raise APIException(f"No remaining prizez for prize: {prize_to_deacrese.name}")
         
         if user_spins.remaining_spins <= 0:
-            raise Exception("No remaining spins for user: ",user_spins.user.name)
+            raise APIException(f"No remaining spins for user: {user_spins.user.name}")
         
         user_spins.update(remaining_spins=(user_spins.remaining_spins-1))
         prize_to_deacrese.update(remaining_quantity=(prize_to_deacrese.remaining_quantity-1))
 
         userprize= UserPrize.objects.create(**validated_data)
         return userprize
+    
+    
+class ResetUserPasswordSerializer(serializers.ModelSerializer):
+    """Serializer for the user object."""
+    password = serializers.CharField(write_only=True)
+    user=UserSerializer()
+    #james token 25b2a49f9bb20071824c01b5219763740fbe32f5
+    class Meta:
+        model = ResetUserPassword
+        fields = ['user', 'create_date', 'expiers_at', 'is_active', 'temp_pass', 'password']
+        extra_kwargs = {'user': {'read_only': True},
+                        'create_date': {'read_only': True},
+                        'expiers_at': {'read_only': True},
+                        'password': {'min_length': 5}}
+        
+    def create(self, validated_data):
+        future_date_after_8Hours = datetime.now() + timedelta(hours = 8)
+        validated_data['expiers_at']=future_date_after_8Hours
+        temp_user_pass_details= ResetUserPassword.objects.create(**validated_data)
+        "Send email with link to FE like http://localhost/temp_user_pass_details.temp_pass"
+        return temp_user_pass_details
+        
+    def update(self, instance, validated_data):
+        """Update and return user."""
+        new_password=validated_data.pop('password', None)
+        if(new_password == None):
+            raise APIException(f"No new password enterd")
+
+        user = instance.user 
+        if new_password:
+            user.set_password(new_password)
+            user.save()
+        
+        validated_data['is_active'] = False
+        temp_user_pass_details = super().update(instance, validated_data)
+        temp_user_pass_details.save()
+        
+        return user

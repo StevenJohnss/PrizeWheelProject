@@ -9,9 +9,10 @@ from user.serializers import (
     UserSerializer,
     AuthTokenSerializer,
     SpinSerializer,
-    UserPrizeSerializer
+    UserPrizeSerializer,
+    ResetUserPasswordSerializer
 )
-from core.models import Spin, UserPrize
+from core.models import Spin, UserPrize, ResetUserPassword
 
 
 class CreateUserView(generics.CreateAPIView):
@@ -43,12 +44,13 @@ class UserSpinsView(generics.RetrieveUpdateAPIView):
     permission_classes = [permissions.IsAuthenticated]
     queryset = Spin.objects.all()
     
+    #if removed: AssertionError: Expected view UserSpinsView to be called with a URL keyword argument named "pk". Fix your URL conf, or set the `.lookup_field` attribute on the view correctly.
     def get_object(self):
         """Filter queryset to authenticated user."""
-        return self.queryset.filter(
+        return self.queryset.get(
             user=self.request.user,
             user__is_active=True
-        ).first()
+        )
 
 
 class UserPrizesView(generics.CreateAPIView, generics.ListAPIView):
@@ -65,6 +67,26 @@ class UserPrizesView(generics.CreateAPIView, generics.ListAPIView):
             user__is_active=True
         )
         
+    def perform_create(self, serializer):
+        """Create a new recipe."""
+        serializer.save(user=self.request.user)
+
+
+class ResetUserPasswordView(generics.CreateAPIView ,generics.RetrieveUpdateAPIView):
+    """Manage the authenticated user."""
+    serializer_class = ResetUserPasswordSerializer
+    authentication_classes = [authentication.TokenAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+    queryset = ResetUserPassword.objects.all()
+    
+    def get_object(self):
+        """Filter queryset to authenticated user."""
+        return self.queryset.get(
+            user=self.request.user,
+            user__is_active=True,
+            temp_pass= self.kwargs['uuid'],  
+        )
+    
     def perform_create(self, serializer):
         """Create a new recipe."""
         serializer.save(user=self.request.user)
