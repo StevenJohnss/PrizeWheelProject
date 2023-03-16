@@ -1,7 +1,6 @@
 """
 Database models.
 """
-from datetime import datetime
 import uuid
 import os
 

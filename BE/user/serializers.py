@@ -10,6 +10,9 @@ from core.models import Spin, UserPrize, Prize, ResetUserPassword
 from django.utils.translation import gettext as _
 from django.db import transaction
 from datetime import datetime, timedelta
+import requests
+import json
+
 
 from rest_framework import serializers
 from rest_framework.exceptions import APIException
@@ -68,14 +71,12 @@ class AuthTokenSerializer(serializers.Serializer):
 
 class SpinSerializer(serializers.ModelSerializer):
     """Serializer for the user object."""
-    user=UserSerializer()
+    user=UserSerializer(read_only=True)
     #james token 25b2a49f9bb20071824c01b5219763740fbe32f5
     class Meta:
         model = Spin
         fields = ['user', 'remaining_spins']
-        extra_kwargs = {'user': {'read_only': True},
-                        'remaining_spins': {'read_only': True}
-                        }
+        extra_kwargs = {'remaining_spins': {'read_only': True}}
     
     def update(self, instance, validated_data):
         """Update and return user."""
@@ -121,10 +122,43 @@ class UserPrizeSerializer(serializers.ModelSerializer):
         return userprize
     
     
+class ResetUserPasswordCreateSerializer(serializers.ModelSerializer):     
+    class Meta:
+        model = ResetUserPassword
+        fields = ['user', 'create_date', 'expiers_at', 'is_active', 'temp_pass']
+        extra_kwargs = {'create_date': {'read_only': True},
+                'expiers_at': {'read_only': True},
+                'is_active': {'read_only': True},
+                'temp_pass': {'read_only': True},
+                'user': {'read_only': True},}
+        
+    def create(self, validated_data):
+        future_date_after_8Hours = datetime.now() + timedelta(hours = 8)
+        validated_data['expiers_at']=future_date_after_8Hours
+        temp_user_pass_details= ResetUserPassword.objects.create(**validated_data)
+        request = self.context['request']
+        origin_url =request.query_params['url']
+        final_url= f'{origin_url}/{temp_user_pass_details.temp_pass}'
+        payload = {
+            "service_id": "service_5p8yjor",
+            "template_id": "contact_form",
+            "user_id": "user_5pshcWi7OYESSWV9vH6ko",
+            "template_params": {
+                "from_name": "Steven Admin",
+                "message": f"{final_url}",
+                "to_name":validated_data.get('user').name,
+                "user_email":validated_data.get('user').email
+            }
+        }
+        r = requests.post('https://api.emailjs.com/api/v1.0/email/send', data=json.dumps(payload), headers = {'Content-type': 'application/json'})
+        "Send email with link from the FE with emailjs services"
+        return temp_user_pass_details
+
+
 class ResetUserPasswordSerializer(serializers.ModelSerializer):
     """Serializer for the user object."""
     password = serializers.CharField(write_only=True)
-    user=UserSerializer()
+    user=UserSerializer(read_only=True)
     #james token 25b2a49f9bb20071824c01b5219763740fbe32f5
     class Meta:
         model = ResetUserPassword
@@ -132,14 +166,10 @@ class ResetUserPasswordSerializer(serializers.ModelSerializer):
         extra_kwargs = {'user': {'read_only': True},
                         'create_date': {'read_only': True},
                         'expiers_at': {'read_only': True},
+                        'is_active': {'read_only': True},
+                        'temp_pass': {'read_only': True},
                         'password': {'min_length': 5}}
         
-    def create(self, validated_data):
-        future_date_after_8Hours = datetime.now() + timedelta(hours = 8)
-        validated_data['expiers_at']=future_date_after_8Hours
-        temp_user_pass_details= ResetUserPassword.objects.create(**validated_data)
-        "Send email with link to FE like http://localhost/temp_user_pass_details.temp_pass"
-        return temp_user_pass_details
         
     def update(self, instance, validated_data):
         """Update and return user."""
@@ -156,4 +186,5 @@ class ResetUserPasswordSerializer(serializers.ModelSerializer):
         temp_user_pass_details = super().update(instance, validated_data)
         temp_user_pass_details.save()
         
-        return user
+        return temp_user_pass_details
+    

@@ -13,4 +13,4 @@ class PrizeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Prize
-        fields = ['name','id']
+        fields = ['name', 'remaining_quantity', 'id']

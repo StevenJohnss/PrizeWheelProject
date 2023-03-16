@@ -5,14 +5,22 @@ from rest_framework import generics, authentication, permissions
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.settings import api_settings
 
+from drf_spectacular.utils import (
+    extend_schema_view,
+    extend_schema,
+    OpenApiParameter,
+    OpenApiTypes,
+)
+
 from user.serializers import (
     UserSerializer,
     AuthTokenSerializer,
     SpinSerializer,
     UserPrizeSerializer,
-    ResetUserPasswordSerializer
+    ResetUserPasswordSerializer,
+    ResetUserPasswordCreateSerializer,
 )
-from core.models import Spin, UserPrize, ResetUserPassword
+from core.models import Spin, UserPrize, ResetUserPassword, User
 
 
 class CreateUserView(generics.CreateAPIView):
@@ -72,21 +80,37 @@ class UserPrizesView(generics.CreateAPIView, generics.ListAPIView):
         serializer.save(user=self.request.user)
 
 
-class ResetUserPasswordView(generics.CreateAPIView ,generics.RetrieveUpdateAPIView):
+@extend_schema_view(
+    post=extend_schema(
+        parameters=[
+            OpenApiParameter(name='email', description='ex: steven@example.com', type=OpenApiTypes.STR ),
+            OpenApiParameter(name='url', description='rest password apge url', type=OpenApiTypes.STR ),
+        ]
+    )
+)
+class ResetUserPasswordView(generics.CreateAPIView):
+    """Manage the authenticated user."""
+    serializer_class = ResetUserPasswordCreateSerializer
+    
+    def perform_create(self, serializer):
+        """Create a new temp pass for the user."""
+        email= self.request.query_params.get('email',None)
+        selected_user= User.objects.get(email=email)
+        if selected_user is not None:
+            serializer.save(user=selected_user)
+        else:
+            raise Exception("User email Not found")
+        
+        
+class ResetUserPasswordDeatilView(generics.RetrieveUpdateDestroyAPIView):
     """Manage the authenticated user."""
     serializer_class = ResetUserPasswordSerializer
-    authentication_classes = [authentication.TokenAuthentication]
-    permission_classes = [permissions.IsAuthenticated]
     queryset = ResetUserPassword.objects.all()
     
     def get_object(self):
         """Filter queryset to authenticated user."""
         return self.queryset.get(
-            user=self.request.user,
             user__is_active=True,
-            temp_pass= self.kwargs['uuid'],  
+            temp_pass__iexact= self.kwargs['uuid'],  
         )
     
-    def perform_create(self, serializer):
-        """Create a new recipe."""
-        serializer.save(user=self.request.user)
