@@ -133,12 +133,15 @@ class ResetUserPasswordCreateSerializer(serializers.ModelSerializer):
                 'user': {'read_only': True},}
         
     def create(self, validated_data):
+        #update previos records if there were any
+        ResetUserPassword.objects.filter(user=validated_data.get('user'),is_active=True).delete()
         future_date_after_8Hours = datetime.now() + timedelta(hours = 8)
         validated_data['expiers_at']=future_date_after_8Hours
         temp_user_pass_details= ResetUserPassword.objects.create(**validated_data)
         request = self.context['request']
         origin_url =request.query_params['url']
         final_url= f'{origin_url}/{temp_user_pass_details.temp_pass}'
+        
         payload = {
             "service_id": "service_5p8yjor",
             "template_id": "contact_form",
