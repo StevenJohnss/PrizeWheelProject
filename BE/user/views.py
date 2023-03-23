@@ -4,6 +4,9 @@ Views for the user API.
 from rest_framework import generics, authentication, permissions
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.settings import api_settings
+from rest_framework.response import Response
+from rest_framework import status
+import datetime
 
 from drf_spectacular.utils import (
     extend_schema_view,
@@ -102,15 +105,22 @@ class ResetUserPasswordView(generics.CreateAPIView):
             raise Exception("User email Not found")
         
         
-class ResetUserPasswordDeatilView(generics.RetrieveUpdateDestroyAPIView):
+class ResetUserPasswordDeatilView(generics.RetrieveUpdateAPIView):
     """Manage the authenticated user."""
     serializer_class = ResetUserPasswordSerializer
     queryset = ResetUserPassword.objects.all()
     
     def get_object(self):
         """Filter queryset to authenticated user."""
-        return self.queryset.get(
+        res = self.queryset.get(
             user__is_active=True,
             temp_pass__iexact= self.kwargs['uuid'],  
         )
+        
+        if res.expiers_at <= datetime.now():
+            res.is_active=False 
+            res.save()
+            return Response("link expired", status.HTTP_400_BAD_REQUEST)
+        
+        return res
     
