@@ -3,6 +3,8 @@ Database models.
 """
 import uuid
 import os
+from django.db.models.functions import Now
+from django.db.models import Q    
 
 from django.conf import settings
 from django.db import models
@@ -121,6 +123,11 @@ class ResetUserPassword(models.Model):
     is_active= models.BooleanField(default=True)
     create_date = models.DateTimeField(auto_now_add=True)
     update_date = models.DateTimeField(auto_now=True)
+    
+    models.CheckConstraint(
+        check=Q(expiers_at__gt=Now()),
+        name = "expiers_at must be greater than or equal today"
+    )
     
     def __str__(self):
         return f"{self.user.name} has an {'Active' if self.is_active else 'Inactive'} temp password of {self.temp_pass}"
