@@ -45,6 +45,7 @@ class ManageUserView(generics.RetrieveUpdateAPIView):
         return self.request.user
 
 
+
 class UserSpinsView(generics.RetrieveUpdateAPIView):
     """Manage the authenticated user."""
     serializer_class = SpinSerializer

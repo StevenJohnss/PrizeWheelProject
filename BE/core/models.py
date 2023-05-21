@@ -78,7 +78,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 
 class Spin(models.Model):
-    """Tag for filtering recipes."""
+    """user Spins"""
     remaining_spins = models.IntegerField(default=3)
     user = models.OneToOneField(settings.AUTH_USER_MODEL, 
                                        verbose_name=("user_spins"),
@@ -90,7 +90,7 @@ class Spin(models.Model):
 
 
 class Prize(models.Model):
-    """Ingredient for recipes."""
+    """Prizes."""
     name = models.CharField(max_length=255)
     create_date = models.DateTimeField(auto_now_add=True)
     update_date = models.DateTimeField(auto_now=True)
@@ -100,7 +100,7 @@ class Prize(models.Model):
         return self.name
 
 class UserPrize(models.Model):
-    """Ingredient for recipes."""
+    """User Prize."""
     prize = models.ForeignKey(Prize, on_delete=models.CASCADE,)
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -111,7 +111,7 @@ class UserPrize(models.Model):
         return f"{self.user.name} has won {self.prize.prize}"
 
 class ResetUserPassword(models.Model):
-    """Ingredient for recipes."""
+    """ResetUserPassword"""
     temp_pass = models.UUIDField(default=uuid.uuid4, unique=True)
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,

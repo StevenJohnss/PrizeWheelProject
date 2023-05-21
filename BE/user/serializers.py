@@ -1,9 +1,11 @@
 """
 Serializers for the user API View.
 """
+from multiprocessing import context
 from django.contrib.auth import (
     get_user_model,
     authenticate,
+    password_validation
 )
 
 from core.models import Spin, UserPrize, Prize, ResetUserPassword
@@ -12,7 +14,7 @@ from django.db import transaction
 from datetime import datetime, timedelta
 import requests
 import json
-
+from rest_framework.response import Response
 
 from rest_framework import serializers
 from rest_framework.exceptions import APIException
@@ -28,12 +30,26 @@ class UserSerializer(serializers.ModelSerializer):
     @transaction.atomic
     def create(self, validated_data):
         """Create and return a user with encrypted password."""
+        password = validated_data.get('password')
+        if password:
+            try:
+                password_validation.validate_password(password)
+            except password_validation.ValidationError as e:
+                raise serializers.ValidationError({'password': e.messages})
+
         user= get_user_model().objects.create_user(**validated_data)
         Spin.objects.create(user=user,remaining_spins=3)
         return user
 
     def update(self, instance, validated_data):
         """Update and return user."""
+        password = validated_data.get('password')
+        if password:
+            try:
+                password_validation.validate_password(password)
+            except password_validation.ValidationError as e:
+                raise serializers.ValidationError({'password': e.messages})
+            
         password = validated_data.pop('password', None)
         user = super().update(instance, validated_data)
 
@@ -122,14 +138,22 @@ class UserPrizeSerializer(serializers.ModelSerializer):
         return userprize
     
     
-class ResetUserPasswordCreateSerializer(serializers.ModelSerializer):     
+class ResetUserPasswordCreateSerializer(serializers.ModelSerializer):
+    # I won't include the url or temp_pass since it's a security risk.
+    # as anyone can reset anyone password if the have the email and the post request payload format
+    # url = serializers.HyperlinkedIdentityField(
+    #     view_name='user:reset_password_detail',
+    #     lookup_field='temp_pass',
+    #     lookup_url_kwarg='uuid',
+    #     read_only=True
+    # )
+    
     class Meta:
         model = ResetUserPassword
-        fields = ['user', 'create_date', 'expiers_at', 'is_active', 'temp_pass']
+        fields = ['user', 'create_date', 'expiers_at', 'is_active','url']
         extra_kwargs = {'create_date': {'read_only': True},
                 'expiers_at': {'read_only': True},
                 'is_active': {'read_only': True},
-                'temp_pass': {'read_only': True},
                 'user': {'read_only': True},}
         
     def create(self, validated_data):
@@ -153,8 +177,14 @@ class ResetUserPasswordCreateSerializer(serializers.ModelSerializer):
                 "user_email":validated_data.get('user').email
             }
         }
-        r = requests.post('https://api.emailjs.com/api/v1.0/email/send', data=json.dumps(payload), headers = {'Content-type': 'application/json'})
-        "Send email with link from the FE with emailjs services"
+
+        try:
+                "Send email with link from the FE with emailjs services"
+                r = requests.post('https://api.emailjs.com/api/v1.0/email/send', data=json.dumps(payload), headers = {'Content-type': 'application/json'})
+        except Exception as e:
+                # Handle the exception here
+                print("An error occurred while sending the email:", str(e))
+            
         return temp_user_pass_details
 
 
@@ -179,7 +209,13 @@ class ResetUserPasswordSerializer(serializers.ModelSerializer):
         new_password=validated_data.pop('password', None)
         if(new_password == None):
             raise APIException(f"No new password enterd")
-
+       
+        if new_password:
+            try:
+                password_validation.validate_password(new_password)
+            except password_validation.ValidationError as e:
+                raise serializers.ValidationError({'password': e.messages})
+            
         user = instance.user 
         if new_password:
             user.set_password(new_password)
