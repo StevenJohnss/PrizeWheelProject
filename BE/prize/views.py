@@ -14,4 +14,5 @@ from core.models import Prize
 class PrizeViews(generics.ListAPIView):
     serializer_class = PrizeSerializer
     queryset = Prize.objects.all()
-
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]

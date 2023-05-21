@@ -1,7 +1,6 @@
 """
 Serializers for the user API View.
 """
-from multiprocessing import context
 from django.contrib.auth import (
     get_user_model,
     authenticate,
