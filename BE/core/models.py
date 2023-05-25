@@ -15,12 +15,12 @@ from django.contrib.auth.models import (
 )
 
 
-# def recipe_image_file_path(instance, filename):
-#     """Generate file path for new recipe image."""
-#     ext = os.path.splitext(filename)[1]
-#     filename = f'{uuid.uuid4()}{ext}'
+def upload_image_file_path(instance, filename):
+    """Generate file path for new prize image."""
+    ext = os.path.splitext(filename)[1]
+    filename = f'{uuid.uuid4()}{ext}'
 
-#     return os.path.join('uploads', 'recipe', filename)
+    return os.path.join('uploads', 'recipe', filename)
 
 
 class UserManager(BaseUserManager):
@@ -97,6 +97,7 @@ class Prize(models.Model):
     create_date = models.DateTimeField(auto_now_add=True)
     update_date = models.DateTimeField(auto_now=True)
     remaining_quantity = models.IntegerField(default=10)
+    image= models.ImageField(null=True, blank=True, upload_to=upload_image_file_path, height_field=None, width_field=None, max_length=None)
     
     def __str__(self):
         return self.name

@@ -18,4 +18,6 @@ app_name = 'prize'
 
 urlpatterns = [
     path('prizes/',  views.PrizeViews.as_view(), name='prizes'),
+    path('prizes/<int:id>/',  views.PrizedetailViews.as_view(), name='prize-detail'),
+    path('create/',  views.PrizeCreateViews.as_view(), name='prize-create'),
 ]
