@@ -52,19 +52,22 @@ class ManageUserView(generics.RetrieveUpdateAPIView):
 
 
 class UserSpinsView(generics.RetrieveUpdateAPIView):
-    """Manage the authenticated user."""
+    """Retrieve and update spins for the authenticated user."""
     serializer_class = SpinSerializer
     authentication_classes = [authentication.TokenAuthentication]
     permission_classes = [permissions.IsAuthenticated]
-    queryset = Spin.objects.all()
-    
-    #if removed: AssertionError: Expected view UserSpinsView to be called with a URL keyword argument named "pk". Fix your URL conf, or set the `.lookup_field` attribute on the view correctly.
+
+    def get_queryset(self):
+        """Return spins for the authenticated and active user."""
+        return Spin.objects.filter(user=self.request.user, user__is_active=True)
+
     def get_object(self):
-        """Filter queryset to authenticated user."""
-        return self.queryset.get(
-            user=self.request.user,
-            user__is_active=True
-        )
+        """overide the normal get_object func where we Retrieve the spin object based on the primary key provided in the URL."""
+        queryset = self.get_queryset()
+        # filter_kwargs = {self.lookup_field: self.kwargs[self.lookup_field]}
+        # obj = generics.get_object_or_404(queryset, **filter_kwargs)
+        # self.check_object_permissions(self.request, obj)
+        return queryset.first()
 
 
 class UserPrizesView(generics.CreateAPIView, generics.ListAPIView):
