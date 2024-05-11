@@ -114,4 +114,4 @@ To test the APIs, you can use tools like Postman or cURL. Ensure you have the co
 This documentation provides a basic overview of the APIs. For more detailed information, refer to the codebase and comments within the code.
 
 ### Notes:
-  - we recommend geting a free mysql DB free from https://railway.app/ 
+  - we recommend geting a free mysql DB from https://railway.app/ 
