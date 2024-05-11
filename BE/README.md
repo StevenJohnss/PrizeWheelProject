@@ -88,15 +88,21 @@ This project is a Django-based application that provides a set of APIs for user 
 ## Setup and Installation
 
 1. Clone the repository.
-2. Install dependencies:
+2. create a python venv and activate it:
+   ```bash
+   python -m venv ./venv
+   .\venv\Scripts\activate
+   ```
+3. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
-3. Set up the database:
+4. Set up the database:
+   Add you connection credentials in seetings.py the run this command:
    ```bash
    python manage.py migrate
    ```
-4. Run the server:
+5. Run the server:
    ```bash
    python manage.py runserver
    ```
@@ -106,3 +112,6 @@ This project is a Django-based application that provides a set of APIs for user 
 To test the APIs, you can use tools like Postman or cURL. Ensure you have the correct authorization headers when required.
 
 This documentation provides a basic overview of the APIs. For more detailed information, refer to the codebase and comments within the code.
+
+### Notes:
+  - we recommend geting a free mysql DB free from https://railway.app/ 
