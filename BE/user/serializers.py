@@ -149,7 +149,9 @@ class ResetUserPasswordCreateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = ResetUserPassword
-        fields = ['user', 'create_date', 'expiers_at', 'is_active','url']
+        fields = ['user', 'create_date', 'expiers_at', 'is_active',
+                  #'url'
+                  ]
         extra_kwargs = {'create_date': {'read_only': True},
                 'expiers_at': {'read_only': True},
                 'is_active': {'read_only': True},
@@ -161,6 +163,8 @@ class ResetUserPasswordCreateSerializer(serializers.ModelSerializer):
         future_date_after_8Hours = datetime.now() + timedelta(hours = 8)
         validated_data['expiers_at']=future_date_after_8Hours
         temp_user_pass_details= ResetUserPassword.objects.create(**validated_data)
+        
+        #here we allow the FE to decide which page the reset pass should land on
         request = self.context['request']
         origin_url =request.query_params['url']
         final_url= f'{origin_url}/{temp_user_pass_details.temp_pass}'
@@ -178,8 +182,11 @@ class ResetUserPasswordCreateSerializer(serializers.ModelSerializer):
         }
 
         try:
+                #seriously should be validating emails through signup first if I release this
+
                 "Send email with link from the FE with emailjs services"
                 r = requests.post('https://api.emailjs.com/api/v1.0/email/send', data=json.dumps(payload), headers = {'Content-type': 'application/json'})
+
         except Exception as e:
                 # Handle the exception here
                 print("An error occurred while sending the email:", str(e))
